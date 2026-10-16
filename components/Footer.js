@@ -1,6 +1,6 @@
 import Link from 'next/link';
 import Icon from './Icon';
-import { profile } from '@/lib/data';
+import { profile } from '@/content/site';
 
 export default function Footer() {
   return (

@@ -1,4 +1,5 @@
 import './globals.css';
+import './sections.css';
 import Nav from '@/components/Nav';
 import Footer from '@/components/Footer';
 

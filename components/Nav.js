@@ -9,6 +9,7 @@ const LINKS = [
   ['Skills', '/#skills'],
   ['Experience', '/#experience'],
   ['Certifications', '/#certifications'],
+  ['Mentoring', '/#mentoring'],
   ['Blog', '/blog'],
   ['Contact', '/#contact'],
 ];

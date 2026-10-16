@@ -1,45 +1,59 @@
 import Link from 'next/link';
 import Image from 'next/image';
 import Icon from '@/components/Icon';
+import Rich from '@/components/Rich';
 import ContactForm from '@/components/ContactForm';
-import CommentSection from '@/components/CommentSection';
 import PostCard from '@/components/PostCard';
-import { profile, heroTags, stats, skills, featured, experience, earlier, certs, training, education } from '@/lib/data';
+import ProjectCard from '@/components/ProjectCard';
+import Testimonials from '@/components/Testimonials';
+import TestimonialCta from '@/components/TestimonialCta';
+import {
+  profile, socials, hero, stats, sections, about, skills, projects, experience, earlier,
+  certs, training, education, mentoring, linkedinBanner, testimonialCta,
+} from '@/content/site';
 import { listPublishedPosts, listApprovedComments } from '@/lib/store';
 
 export const revalidate = 60;
 
+const isWeb = (href) => /^https?:/i.test(href);
+
 export default async function Home() {
-  const [posts, comments] = await Promise.all([listPublishedPosts(), listApprovedComments('general')]);
+  const [posts, testimonials] = await Promise.all([listPublishedPosts(), listApprovedComments('general')]);
   const latest = posts.slice(0, 3);
 
   return (
     <main>
-      {/* ---------- Hero ---------- */}
-      <header className="hero" id="home">
+      {/* ================= HERO ================= */}
+      <header className="hero2" id="home">
         <div className="w">
-          <div className="hg">
+          <div className="hero2-grid">
             <div>
-              <span className="lab">{profile.title}</span>
-              <h1>Kedar Nath <span>Sahu</span></h1>
-              <div className="tags">
-                {heroTags.map((t, i) => (
-                  <span key={t}>{i > 0 && <i />}{t}</span>
+              <span className="pill"><i className="dot" />{hero.status}</span>
+              <p className="greet">{hero.greeting}</p>
+              <h1><span className="gt">{hero.firstName}</span> {hero.lastName}</h1>
+              <p className="role">{hero.role}</p>
+              <p className="lead">{hero.summary}</p>
+              <div className="bt2">
+                <Link className="btn2 pri" href={hero.primaryButton.href}>{hero.primaryButton.label} <Icon name="arrow" /></Link>
+                <a className="btn2 out" href={profile.cvUrl}><i className="dot" />{hero.secondaryButtonLabel} <Icon name="doc" /></a>
+              </div>
+              <div className="soc">
+                {socials.map((s) => (
+                  <a key={s.label} className="soc-i" href={s.href} aria-label={s.label} title={s.label}
+                     {...(isWeb(s.href) ? { target: '_blank', rel: 'noopener noreferrer' } : {})}>
+                    <Icon name={s.icon} />
+                  </a>
                 ))}
               </div>
-              <p className="one">{profile.oneLiner}</p>
-              <div className="bt">
-                <Link className="btn p" href="#contact">Get in Touch →</Link>
-                <a className="btn" href={profile.cvUrl}>Download CV ⤓</a>
-                <a className="btn" href={profile.linkedin} target="_blank" rel="noopener noreferrer" aria-label="LinkedIn">in</a>
-              </div>
             </div>
-            <div className="ph">
-              <Image src="/profile.jpg" alt={profile.name} width={340} height={340} priority />
-              <div className="badge"><Icon name="check" />ENTERPRISE<br />SECURITY</div>
+            <div className="frame">
+              <Image src={profile.photo} alt={profile.name} width={420} height={525} priority />
+              <span className="chipi c1"><Icon name="shield" /></span>
+              <span className="chipi c2"><Icon name="cloud" /></span>
+              <span className="chipi c3"><Icon name="lock" /></span>
             </div>
           </div>
-          <div className="stats">
+          <div className="stats2">
             {stats.map(([n, label]) => (
               <div key={label}><b>{n}</b><span>{label}</span></div>
             ))}
@@ -47,39 +61,27 @@ export default async function Home() {
         </div>
       </header>
 
-      {/* ---------- About ---------- */}
+      {/* ================= ABOUT ================= */}
       <section id="about">
         <div className="w">
-          <div className="sh"><span className="lab">About</span><h2>Security expertise grounded in real infrastructure.</h2></div>
+          <div className="sh"><span className="lab">{sections.about.label}</span><h2>{sections.about.title}</h2></div>
           <div className="card ab">
-            <div className="l">
-              I help enterprises find and close security gaps. As a Cybersecurity Consultant at Wipro, I work across cloud security,
-              endpoint security, identity and Microsoft 365, with a focus on <b>Microsoft Security and Wiz Cloud/Wiz Code.</b>
-            </div>
+            <div className="l"><Rich text={about.lead} /></div>
             <div>
-              <p>I started in 2008 as a Windows and infrastructure administrator, then moved through Citrix, VMware and Active Directory into Azure security and identity, and now cloud security with Microsoft 365 Defender and Wiz Cloud/Wiz Code.</p>
-              <p>That background means I understand how infrastructure really runs, so the security I design works in production, not just on paper.</p>
-              <ul>
-                <li>Cloud posture with Wiz Cloud/Wiz Code and Microsoft Defender for Cloud</li>
-                <li>Endpoint migrations from CrowdStrike and Trellix to Microsoft Defender</li>
-                <li>Identity with Entra ID, Conditional Access, PIM, MFA and RBAC</li>
-                <li>Client engagements in Germany and the Netherlands</li>
-              </ul>
+              {about.paragraphs.map((p) => <p key={p}>{p}</p>)}
+              <ul>{about.bullets.map((b) => <li key={b}>{b}</li>)}</ul>
               <div className="loc"><Icon name="pin" />Based in {profile.location}</div>
             </div>
           </div>
         </div>
       </section>
 
-      {/* ---------- Skills ---------- */}
+      {/* ================= SKILLS ================= */}
       <section id="skills">
         <div className="w">
           <div className="sh">
-            <span className="lab">Core Skills</span>
-            <div>
-              <h2>End-to-end security capabilities.</h2>
-              <p>A broad technical foundation spanning modern cloud controls, endpoint defense, identity and enterprise infrastructure.</p>
-            </div>
+            <span className="lab">{sections.skills.label}</span>
+            <div><h2>{sections.skills.title}</h2><p>{sections.skills.text}</p></div>
           </div>
           <div className="g3">
             {skills.map(([icon, title, tags]) => (
@@ -93,35 +95,26 @@ export default async function Home() {
         </div>
       </section>
 
-      {/* ---------- Featured work ---------- */}
-      <section id="work" style={{ paddingTop: 20 }}>
+      {/* ================= FEATURED PROJECTS ================= */}
+      <section id="work">
         <div className="w">
-          <div className="sh" style={{ gridTemplateColumns: '1fr' }}>
-            <span className="lab">Featured Work</span>
-            <h2>Security transformation in practice.</h2>
+          <div className="center-head">
+            <span className="pill"><Icon name="sparkle" />{sections.projects.badge}</span>
+            <h2 className="big gt">{sections.projects.title}</h2>
+            <p>{sections.projects.text}</p>
           </div>
-          <div className="fw">
-            {featured.map(([title, text], i) => (
-              <div className="card" key={title}>
-                <span className="n">0{i + 1}</span>
-                <Icon name="arrow" />
-                <h3>{title}</h3>
-                <p>{text}</p>
-              </div>
-            ))}
+          <div className="pj-grid">
+            {projects.map((p) => <ProjectCard key={p.title} p={p} />)}
           </div>
         </div>
       </section>
 
-      {/* ---------- Experience ---------- */}
+      {/* ================= EXPERIENCE ================= */}
       <section id="experience">
         <div className="w">
           <div className="sh">
-            <span className="lab">Experience</span>
-            <div>
-              <h2>A career built from the infrastructure up.</h2>
-              <p>Enterprise consulting experience across security, cloud, virtualization and core infrastructure since 2008.</p>
-            </div>
+            <span className="lab">{sections.experience.label}</span>
+            <div><h2>{sections.experience.title}</h2><p>{sections.experience.text}</p></div>
           </div>
           {experience.map((e) => (
             <div className="tl" key={e.dates}>
@@ -148,15 +141,12 @@ export default async function Home() {
         </div>
       </section>
 
-      {/* ---------- Certifications + Education ---------- */}
+      {/* ================= CERTIFICATIONS + EDUCATION ================= */}
       <section id="certifications">
         <div className="w">
           <div className="sh">
-            <span className="lab">Credentials</span>
-            <div>
-              <h2>Certified across the security ecosystem.</h2>
-              <p>Current certifications and continued technical training across Microsoft, Citrix and enterprise security.</p>
-            </div>
+            <span className="lab">{sections.credentials.label}</span>
+            <div><h2>{sections.credentials.title}</h2><p>{sections.credentials.text}</p></div>
           </div>
           <div className="cg">
             {certs.map(([issuer, name]) => (
@@ -183,15 +173,51 @@ export default async function Home() {
         </div>
       </section>
 
-      {/* ---------- Blog ---------- */}
+      {/* ================= MENTORING ================= */}
+      <section id="mentoring" className="mentor">
+        <div className="w">
+          <div className="mentor-grid">
+            <div>
+              <span className="pill"><i className="dot" />{mentoring.pill}</span>
+              <h2 className="big"><span className="gt">{mentoring.headline}</span></h2>
+              <p className="lead">{mentoring.text}</p>
+              <div className="bt2">
+                <a className="btn2 pri" href={profile.topmate} target="_blank" rel="noopener noreferrer"><Icon name="calendar" />{mentoring.bookLabel} <Icon name="arrow" /></a>
+                <a className="btn2 out" href={profile.linkedin} target="_blank" rel="noopener noreferrer"><Icon name="linkedin" />{mentoring.linkedinLabel}</a>
+              </div>
+              <p className="eyebrow">{mentoring.workedAtLabel}</p>
+              <div className="chips">{mentoring.workedAt.map((c) => <span key={c}>{c}</span>)}</div>
+            </div>
+            <div className="mstats">
+              {mentoring.stats.map(([n, label]) => (
+                <div key={label}><b className="gt">{n}</b><span>{label}</span></div>
+              ))}
+            </div>
+          </div>
+        </div>
+      </section>
+
+      {/* ================= LINKEDIN BANNER ================= */}
+      <div className="w">
+        <div className="li">
+          <div className="li-ic"><Icon name="linkedin" /></div>
+          <div className="li-tx">
+            <span className="eyebrow pink">{linkedinBanner.eyebrow}</span>
+            <h3>{linkedinBanner.titleA} <span className="gt gold">{linkedinBanner.titleB}</span></h3>
+            <p>{linkedinBanner.text}</p>
+          </div>
+          <a className="btn2 lin" href={profile.linkedin} target="_blank" rel="noopener noreferrer">
+            <Icon name="linkedin" />{linkedinBanner.button} <Icon name="arrow" />
+          </a>
+        </div>
+      </div>
+
+      {/* ================= BLOG ================= */}
       <section id="blog">
         <div className="w">
           <div className="sh">
-            <span className="lab">Blog</span>
-            <div>
-              <h2>Notes on cloud and endpoint security.</h2>
-              <p>Practical write-ups from real projects: what worked, what did not, and what I would do differently.</p>
-            </div>
+            <span className="lab">{sections.blog.label}</span>
+            <div><h2>{sections.blog.title}</h2><p>{sections.blog.text}</p></div>
           </div>
           {latest.length === 0 ? (
             <p className="empty">The first posts are on the way.</p>
@@ -204,34 +230,42 @@ export default async function Home() {
         </div>
       </section>
 
-      {/* ---------- Comments ---------- */}
-      <section id="comments" style={{ paddingTop: 20 }}>
+      {/* ================= TESTIMONIALS ================= */}
+      <section id="testimonials" className="tsec">
         <div className="w">
-          <div className="sh" style={{ gridTemplateColumns: '1fr' }}>
-            <span className="lab">Comments</span>
-            <h2>Leave a comment.</h2>
-          </div>
-          <CommentSection slug="general" comments={comments} heading="What visitors say" />
+          <TestimonialCta cfg={testimonialCta} />
+          <h2 className="big gt center" style={{ margin: '70px 0 40px' }}>{sections.testimonials.title}</h2>
         </div>
+        <Testimonials items={testimonials} />
       </section>
 
-      {/* ---------- Contact ---------- */}
+      {/* ================= CONTACT ================= */}
       <section id="contact">
         <div className="w">
-          <div className="sh" style={{ gridTemplateColumns: '1fr' }}>
-            <span className="lab">Contact</span>
-            <h2 style={{ textAlign: 'center', margin: '0 auto' }}>Let’s secure what matters.</h2>
+          <div className="center-head">
+            <span className="pill"><Icon name="sparkle" />{sections.contact.badge}</span>
+            <h2 className="big gt">{sections.contact.title}</h2>
+            <p>{sections.contact.text}</p>
           </div>
-          <div className="ct">
-            <div>
-              <h3>Planning an endpoint migration, improving cloud visibility, or sorting out identity and access?</h3>
-              <p className="sb">Let’s talk about how your organization can build a clearer, stronger security posture.</p>
-              <div className="ci"><Icon name="mail" /><div><small>Email</small>{profile.email}</div></div>
-              <div className="ci"><Icon name="phone" /><div><small>Phone</small>{profile.phone}</div></div>
-              <div className="ci"><Icon name="linkedin" /><div><small>LinkedIn</small><a href={profile.linkedin} target="_blank" rel="noopener noreferrer">{profile.linkedinLabel}</a></div></div>
-              <div className="ci"><Icon name="pin" /><div><small>Location</small>{profile.location}</div></div>
-            </div>
-            <ContactForm email={profile.email} />
+          <div className="contact-grid">
+            <aside className="cinfo">
+              <h3>Contact info</h3>
+              <div className="crow"><span className="ico"><Icon name="mail" /></span><div><small>Email</small><a href={`mailto:${profile.email}`}>{profile.email}</a></div></div>
+              <div className="crow"><span className="ico"><Icon name="phone" /></span><div><small>Phone</small>{profile.phone}</div></div>
+              <div className="crow"><span className="ico"><Icon name="pin" /></span><div><small>Location</small>{profile.location}</div></div>
+              <div className="follow">
+                <small>Follow</small>
+                <div className="soc">
+                  {socials.map((s) => (
+                    <a key={s.label} className="soc-i" href={s.href} aria-label={s.label} title={s.label}
+                       {...(isWeb(s.href) ? { target: '_blank', rel: 'noopener noreferrer' } : {})}>
+                      <Icon name={s.icon} />
+                    </a>
+                  ))}
+                </div>
+              </div>
+            </aside>
+            <ContactForm />
           </div>
         </div>
       </section>

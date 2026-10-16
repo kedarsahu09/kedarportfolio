@@ -3,6 +3,7 @@ import { useCallback, useEffect, useState } from 'react';
 import ReactMarkdown from 'react-markdown';
 import remarkGfm from 'remark-gfm';
 import { slugify } from '@/lib/util';
+import Stars from './Stars';
 
 async function api(url, opts = {}) {
   const res = await fetch(url, { headers: { 'Content-Type': 'application/json' }, ...opts });
@@ -17,10 +18,23 @@ async function api(url, opts = {}) {
 
 const fmt = (iso) => (iso ? new Date(iso).toLocaleString() : '');
 
-export default function AdminApp({ authed: initialAuthed, usingMemory }) {
+export default function AdminApp({ authed: initialAuthed, usingMemory, emailConfigured }) {
   const [authed, setAuthed] = useState(initialAuthed);
-  const [tab, setTab] = useState('comments');
-  const [pending, setPending] = useState(0);
+  const [tab, setTab] = useState('messages');
+  const [comments, setComments] = useState(null);
+  const [messages, setMessages] = useState(null);
+
+  const lost = useCallback(() => setAuthed(false), []);
+  const loadComments = useCallback(async () => {
+    try { setComments((await api('/api/admin/comments')).comments); } catch (e) { if (e.status === 401) lost(); }
+  }, [lost]);
+  const loadMessages = useCallback(async () => {
+    try { setMessages((await api('/api/admin/messages')).messages); } catch (e) { if (e.status === 401) lost(); }
+  }, [lost]);
+
+  useEffect(() => {
+    if (authed) { loadComments(); loadMessages(); }
+  }, [authed, loadComments, loadMessages]);
 
   async function logout() {
     await api('/api/admin/session', { method: 'DELETE' }).catch(() => {});
@@ -28,6 +42,9 @@ export default function AdminApp({ authed: initialAuthed, usingMemory }) {
   }
 
   if (!authed) return <Login onDone={() => setAuthed(true)} />;
+
+  const pending = comments ? comments.filter((c) => c.status === 'pending').length : 0;
+  const unread = messages ? messages.filter((m) => m.status === 'unread').length : 0;
 
   return (
     <main className="adm">
@@ -37,21 +54,27 @@ export default function AdminApp({ authed: initialAuthed, usingMemory }) {
           <button className="btn" onClick={logout}>Sign out</button>
         </div>
         {usingMemory && (
-          <p className="note err">
-            No database connected: data is stored in memory and will be lost on restart. Connect Upstash Redis (see README).
+          <p className="note err">No database connected: data is stored in memory and will be lost on restart. Connect Upstash Redis (see README).</p>
+        )}
+        {!emailConfigured && (
+          <p className="note" style={{ color: '#fbbf24' }}>
+            Email alerts are off. New messages and testimonials still arrive here. To also get them in your inbox, add RESEND_API_KEY (see README, section “Email alerts”).
           </p>
         )}
         <div className="tabs" role="tablist">
+          <button role="tab" aria-selected={tab === 'messages'} className={tab === 'messages' ? 'on' : ''} onClick={() => setTab('messages')}>
+            Messages{unread > 0 && <span className="dot2">{unread}</span>}
+          </button>
           <button role="tab" aria-selected={tab === 'comments'} className={tab === 'comments' ? 'on' : ''} onClick={() => setTab('comments')}>
-            Comments{pending > 0 && <span className="dot">{pending}</span>}
+            Testimonials &amp; comments{pending > 0 && <span className="dot2">{pending}</span>}
           </button>
           <button role="tab" aria-selected={tab === 'posts'} className={tab === 'posts' ? 'on' : ''} onClick={() => setTab('posts')}>
             Blog posts
           </button>
         </div>
-        {tab === 'comments'
-          ? <Comments onPending={setPending} onAuthLost={() => setAuthed(false)} />
-          : <Posts onAuthLost={() => setAuthed(false)} />}
+        {tab === 'messages' && <Messages items={messages} reload={loadMessages} />}
+        {tab === 'comments' && <Comments items={comments} reload={loadComments} />}
+        {tab === 'posts' && <Posts onAuthLost={lost} />}
       </div>
     </main>
   );
@@ -91,37 +114,70 @@ function Login({ onDone }) {
   );
 }
 
-/* ---------------------------- Comments ---------------------------- */
-function Comments({ onPending, onAuthLost }) {
-  const [items, setItems] = useState(null);
-  const [filter, setFilter] = useState('pending');
+/* ---------------------------- Messages (contact form) ---------------------------- */
+function Messages({ items, reload }) {
+  const [filter, setFilter] = useState('unread');
   const [error, setError] = useState('');
-
-  const load = useCallback(async () => {
-    try {
-      const { comments } = await api('/api/admin/comments');
-      setItems(comments);
-      onPending(comments.filter((c) => c.status === 'pending').length);
-    } catch (e) {
-      if (e.status === 401) onAuthLost();
-      else setError(e.message);
-    }
-  }, [onPending, onAuthLost]);
-
-  useEffect(() => { load(); }, [load]);
 
   async function act(fn) {
     setError('');
-    try { await fn(); await load(); } catch (e) { setError(e.message); }
+    try { await fn(); await reload(); } catch (e) { setError(e.message); }
+  }
+  const setStatus = (id, status) => act(() => api('/api/admin/messages', { method: 'PATCH', body: JSON.stringify({ id, status }) }));
+  const remove = (id) => confirm('Delete this message permanently?') && act(() => api(`/api/admin/messages?id=${id}`, { method: 'DELETE' }));
+
+  if (!items) return <p className="empty">Loading…</p>;
+  const shown = items.filter((m) => filter === 'all' || m.status === filter);
+
+  return (
+    <div>
+      <p className="admhelp">Messages sent through the “Get in Touch” form. Only you can see these.</p>
+      <div className="filters">
+        {['unread', 'read', 'all'].map((f) => (
+          <button key={f} className={filter === f ? 'on' : ''} onClick={() => setFilter(f)}>{f}</button>
+        ))}
+      </div>
+      {error && <p className="note err">{error}</p>}
+      {shown.length === 0 && <p className="empty">Nothing here.</p>}
+      <div className="cm">
+        {shown.map((m) => (
+          <div className={`card cmi${m.status === 'unread' ? ' unread' : ''}`} key={m.id}>
+            <div><b>{m.name}</b><small>{fmt(m.createdAt)} · {m.status}</small></div>
+            <span className="meta"><a href={`mailto:${m.email}`}>{m.email}</a></span>
+            {m.subject && <div className="subject">{m.subject}</div>}
+            <p>{m.message}</p>
+            <div className="acts">
+              <a className="btn p" href={`mailto:${m.email}?subject=${encodeURIComponent('Re: ' + (m.subject || 'your message'))}`}>Reply by email</a>
+              {m.status === 'unread'
+                ? <button className="btn" onClick={() => setStatus(m.id, 'read')}>Mark as read</button>
+                : <button className="btn" onClick={() => setStatus(m.id, 'unread')}>Mark as unread</button>}
+              <button className="btn danger" onClick={() => remove(m.id)}>Delete</button>
+            </div>
+          </div>
+        ))}
+      </div>
+    </div>
+  );
+}
+
+/* ---------------------------- Testimonials & comments ---------------------------- */
+function Comments({ items, reload }) {
+  const [filter, setFilter] = useState('pending');
+  const [error, setError] = useState('');
+
+  async function act(fn) {
+    setError('');
+    try { await fn(); await reload(); } catch (e) { setError(e.message); }
   }
   const setStatus = (id, status) => act(() => api('/api/admin/comments', { method: 'PATCH', body: JSON.stringify({ id, status }) }));
-  const remove = (id) => confirm('Delete this comment permanently?') && act(() => api(`/api/admin/comments?id=${id}`, { method: 'DELETE' }));
+  const remove = (id) => confirm('Delete this permanently?') && act(() => api(`/api/admin/comments?id=${id}`, { method: 'DELETE' }));
 
-  if (!items) return <p className="empty">{error || 'Loading…'}</p>;
+  if (!items) return <p className="empty">Loading…</p>;
   const shown = items.filter((c) => filter === 'all' || c.status === filter);
 
   return (
     <div>
+      <p className="admhelp">Nothing appears on your website until you press “Approve &amp; publish”.</p>
       <div className="filters">
         {['pending', 'approved', 'all'].map((f) => (
           <button key={f} className={filter === f ? 'on' : ''} onClick={() => setFilter(f)}>{f}</button>
@@ -133,10 +189,16 @@ function Comments({ onPending, onAuthLost }) {
         {shown.map((c) => (
           <div className="card cmi" key={c.id}>
             <div>
+              {c.photo && /* eslint-disable-next-line @next/next/no-img-element */ <img className="thumb" src={c.photo} alt="" />}
               <b>{c.name}</b>
-              <small>{fmt(c.createdAt)} · on {c.slug === 'general' ? 'home page' : `/blog/${c.slug}`} · {c.status}</small>
-              {c.email && <small> · <a href={`mailto:${c.email}`}>{c.email}</a></small>}
+              {c.rating > 0 && <> <Stars n={c.rating} /></>}
+              <small>{fmt(c.createdAt)} · {c.slug === 'general' ? 'testimonial (home page)' : `comment on /blog/${c.slug}`} · {c.status}</small>
             </div>
+            {(c.role || c.company) && <span className="meta">{[c.role, c.company].filter(Boolean).join(' · ')}</span>}
+            <span className="meta">
+              {c.email && <a href={`mailto:${c.email}`}>{c.email}</a>}
+              {c.linkedin && <> · <a href={c.linkedin} target="_blank" rel="noopener noreferrer nofollow">LinkedIn</a></>}
+            </span>
             <p>{c.message}</p>
             <div className="acts">
               {c.status !== 'approved'
