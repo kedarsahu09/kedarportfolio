@@ -223,7 +223,7 @@ export const certs = [
   ['Microsoft · MS-500', 'Microsoft 365 Security Administrator', '/certificates/ms-500.jpg'],
   ['Microsoft · AZ-104', 'Azure Administrator', '/certificates/az-104.jpg'],
   ['Microsoft · SC-900', 'Security, Compliance & Identity Fundamentals', '/certificates/sc-900.jpg'],
-  ['Citrix · 1Y0-241', 'App Delivery & Security', '/certificates/citrix-1y0-241.jpg'],
+  ['Citrix · 1Y0-241', 'App Delivery & Security', '/certificates/citrixappdcert.jpg'],
   ['Citrix · CCA-V', 'XenDesktop 7.6', '/certificates/citrix-cca-v.jpg'],
   ['Citrix · CCA', 'XenApp 6.5', '/certificates/citrix-cca.jpg'],
   ['AI · BE10X', 'AI Office productivity Specialist', '/certificates/aiops.jpg'],
